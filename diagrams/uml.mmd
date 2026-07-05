@@ -1,15 +1,51 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
-
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Owner {
+        +name: str
+        +preferences: list[str]
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Pet {
+        +name: str
+        +species: str
+        +age_months: int|None
     }
 
-    ClassName --> AnotherClass : relationship
+    class Task {
+        +title: str
+        +duration_minutes: int
+        +priority: str
+    }
+
+    class PlannedTask {
+        +title: str
+        +duration_minutes: int
+        +priority: str
+        +reason: str
+    }
+
+    class DailyPlan {
+        +owner: Owner
+        +pet: Pet
+        +items: list[PlannedTask]
+        +total_minutes: int
+        +skipped_tasks: list[str]
+        +reasons: list[str]
+    }
+
+    class DailyPlanScheduler {
+        +owner: Owner
+        +pet: Pet
+        +tasks: list[Task]
+        +available_minutes: int
+        +build_plan() DailyPlan
+        +_priority_score(priority: str) int
+    }
+
+    DailyPlan "1" --> "1" Owner : references
+    DailyPlan "1" --> "1" Pet : references
+    DailyPlan "1" --> "0..*" PlannedTask : contains
+    DailyPlanScheduler "1" --> "1" DailyPlan : creates
+    DailyPlanScheduler "1" --> "0..*" Task : evaluates
+    Task "0..*" --> "1" DailyPlanScheduler : is passed to
+    Owner "1" --> "0..*" Task : is described by
+    Pet "1" --> "0..*" Task : is described by

@@ -44,51 +44,51 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+Example of the generated plan shown in the app:
 
 ```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
+Daily plan for Mochi is ready.
+Planned time: 50 of 60 minutes
+
+Included tasks
+- Morning walk (30 min, priority: high)
+- Medication (20 min, priority: high)
+
+Why this plan was chosen
+- Morning walk was selected because it has a high priority and fits within the remaining time.
+- Medication was selected because it has a high priority and fits within the remaining time.
+
+Skipped tasks
+- Feeding
 ```
 
 ## 🧪 Testing PawPal+
 
 ```bash
-# Run the full test suite:
 pytest
-
-# Run with coverage:
-pytest --cov
 ```
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+3 passed in 0.XXs
 ```
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | DailyPlanScheduler.build_plan | Tasks are ordered by priority first, then admitted if they fit the remaining time |
+| Filtering | DailyPlanScheduler.build_plan | Tasks that exceed the remaining time are skipped |
+| Conflict handling | DailyPlanScheduler.build_plan | The planner keeps a running total of minutes so overlapping tasks are not double-booked |
+| Recurring tasks | Not implemented yet | Future work could support daily or weekly task repetition |
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+1. Enter the owner's name and the pet's name/species.
+2. Add one or more care tasks with a duration and priority.
+3. Adjust the available minutes for the day.
+4. Click Generate schedule to see the selected tasks and the explanation for each choice.
+5. Edit or remove tasks and regenerate the plan to compare different outcomes.
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
-
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+**Screenshot or video** *(optional)*: Add a screenshot of the Streamlit app once you run it locally.
