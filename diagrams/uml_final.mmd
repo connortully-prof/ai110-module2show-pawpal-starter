@@ -1,0 +1,77 @@
+classDiagram
+    class Owner {
+        +name: str
+        +preferences: list[str]
+        +pets: list[Pet]
+        +add_pet(pet: Pet) Pet
+        +get_all_tasks() list[Task]
+        +get_pending_tasks() list[Task]
+    }
+
+    class Pet {
+        +name: str
+        +species: str
+        +age_months: int|None
+        +tasks: list[Task]
+        +add_task(task: Task) Task
+        +get_pending_tasks() list[Task]
+        +task_count() int
+    }
+
+    class Task {
+        +title: str
+        +duration_minutes: int
+        +priority: str
+        +frequency: str
+        +completed: bool
+        +description: str|None
+        +scheduled_time: str|None
+        +due_date: date|None
+        +mark_complete(pet: Pet|None) Task|None
+        +mark_incomplete()
+        +to_summary() str
+    }
+
+    class Scheduler {
+        +owner: Owner
+        +retrieve_tasks() list[Task]
+        +build_daily_schedule(available_minutes: int) list[Task]
+        +sort_by_time() list[Task]
+        +filter_tasks(pet_name: str|None, completed: bool|None) list[Task]
+        +detect_conflicts() list[str]
+        +_priority_score(priority: str) int
+    }
+
+    class PlannedTask {
+        +title: str
+        +duration_minutes: int
+        +priority: str
+        +reason: str
+    }
+
+    class DailyPlan {
+        +owner: Owner
+        +pet: Pet
+        +items: list[PlannedTask]
+        +total_minutes: int
+        +skipped_tasks: list[str]
+        +reasons: list[str]
+    }
+
+    class DailyPlanScheduler {
+        +owner: Owner
+        +pet: Pet
+        +tasks: list[Task]
+        +available_minutes: int
+        +build_plan() DailyPlan
+        +_priority_score(priority: str) int
+    }
+
+    Owner "1" --> "0..*" Pet : owns
+    Pet "1" --> "0..*" Task : contains
+    Owner "1" --> "0..*" Task : aggregates
+    Scheduler "1" --> "1" Owner : uses
+    Scheduler "1" --> "0..*" Task : evaluates
+    DailyPlanScheduler "1" --> "0..*" Task : evaluates
+    DailyPlanScheduler "1" --> "1" DailyPlan : creates
+    DailyPlan "1" --> "0..*" PlannedTask : contains

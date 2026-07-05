@@ -1,6 +1,6 @@
 import streamlit as st
 
-from pawpal_system import DailyPlanScheduler, Owner, Pet, Task
+from pawpal_system import DailyPlanScheduler, Owner, Pet, Task, Scheduler
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -155,12 +155,56 @@ if st.button("Generate schedule"):
         st.success(f"Daily plan for {selected_pet.name} is ready.")
         st.write(f"Planned time: {plan.total_minutes} of {int(available_minutes)} minutes")
 
+        scheduler = Scheduler(owner=owner)
+        sorted_tasks = scheduler.sort_by_time()
+        pending_tasks = scheduler.filter_tasks(pet_name=selected_pet.name, completed=False)
+        conflicts = scheduler.detect_conflicts()
+
         if plan.items:
             st.write("### Included tasks")
-            for item in plan.items:
-                st.write(f"- {item.title} ({item.duration_minutes} min, priority: {item.priority})")
+            st.table(
+                [
+                    {
+                        "title": item.title,
+                        "duration_minutes": item.duration_minutes,
+                        "priority": item.priority,
+                    }
+                    for item in plan.items
+                ]
+            )
         else:
             st.info("No tasks fit within the available time.")
+
+        st.write("### Sorted tasks")
+        st.table(
+            [
+                {
+                    "title": task.title,
+                    "time": task.scheduled_time or "unscheduled",
+                    "priority": task.priority,
+                }
+                for task in sorted_tasks
+            ]
+        )
+
+        st.write("### Pending tasks for this pet")
+        st.table(
+            [
+                {
+                    "title": task.title,
+                    "time": task.scheduled_time or "unscheduled",
+                    "priority": task.priority,
+                }
+                for task in pending_tasks
+            ]
+        )
+
+        if conflicts:
+            st.warning("### Conflicts detected")
+            for conflict in conflicts:
+                st.warning(f"- {conflict}")
+        else:
+            st.success("No scheduling conflicts detected.")
 
         st.write("### Why this plan was chosen")
         for reason in plan.reasons:

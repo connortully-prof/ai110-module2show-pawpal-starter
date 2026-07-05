@@ -31,13 +31,13 @@
 
 **a. How you used AI**
 
-- I used AI tools to help design the class structure, generate the initial scheduler code, build the Streamlit UI, and debug pytest import issues. I also used AI to draft the reflection content and refine the README documentation.
-- The most useful prompts were requests for implementation steps, test cases, and debugging help when the app or tests failed.
+- I used AI tools to help design the class structure, generate the initial scheduler code, build the Streamlit UI, debug test issues, and draft the final reflection and documentation. The most effective features were code generation, test suggestions, and quick debugging help when the app or tests failed.
+- The most useful prompts were requests for implementation steps, test cases, and suggestions for improving readability in the scheduler logic.
 
 **b. Judgment and verification**
 
-- One example was when the AI suggested a quick change to the explanation text without validating it against the tests. I did not accept that as-is; I reran pytest and adjusted the implementation until the expected behavior matched the test cases.
-- I verified the solution by running the test suite and confirming the app could start successfully.
+- One example was when the AI suggested a more compact version of the conflict detection logic. I modified it to keep the implementation clear and easier for a human reader to follow, even though the shorter version was slightly more concise. I verified the decision by reviewing the resulting code and rerunning the tests.
+- I also used separate chat sessions for different phases of the project so I could focus on implementation, testing, and documentation without mixing concerns.
 
 ---
 
