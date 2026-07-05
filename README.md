@@ -62,16 +62,26 @@ Skipped tasks
 - Feeding
 ```
 
+Terminal demo output from running main.py:
+
+```
+Today's Schedule
+====================
+- Morning walk (30 min, high)
+- Litter cleanup (15 min, high)
+- Feeding (10 min, medium)
+```
+
 ## 🧪 Testing PawPal+
 
 ```bash
-pytest
+.venv\Scripts\python -m pytest -q
 ```
 
 Sample test output:
 
 ```
-3 passed in 0.XXs
+5 passed in 0.06s
 ```
 
 ## 📐 Smarter Scheduling
