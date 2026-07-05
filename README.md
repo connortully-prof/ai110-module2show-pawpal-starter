@@ -74,15 +74,28 @@ Today's Schedule
 
 ## 🧪 Testing PawPal+
 
+Run the test suite with:
+
 ```bash
 .venv\Scripts\python -m pytest -q
 ```
 
+The tests cover the core behaviors of the scheduler and task model:
+- Task completion updates the task status
+- Adding a task increases the pet's task count
+- Tasks are sorted correctly by scheduled time
+- Filtering returns the expected pending tasks for a selected pet
+- Completing a daily task creates a new recurring task
+- Conflicts are detected when two tasks share the same time
+
 Sample test output:
 
 ```
-5 passed in 0.06s
+.........                                                                [100%]
+9 passed in 0.03s
 ```
+
+Confidence level: ⭐⭐⭐⭐☆
 
 ## 📐 Smarter Scheduling
 
