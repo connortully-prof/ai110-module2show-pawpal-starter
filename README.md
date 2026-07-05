@@ -88,10 +88,10 @@ Sample test output:
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | DailyPlanScheduler.build_plan | Tasks are ordered by priority first, then admitted if they fit the remaining time |
-| Filtering | DailyPlanScheduler.build_plan | Tasks that exceed the remaining time are skipped |
-| Conflict handling | DailyPlanScheduler.build_plan | The planner keeps a running total of minutes so overlapping tasks are not double-booked |
-| Recurring tasks | Not implemented yet | Future work could support daily or weekly task repetition |
+| Sorting by time | Scheduler.sort_by_time() | Orders tasks by their scheduled time string so the day is easier to read |
+| Filtering by pet/status | Scheduler.filter_tasks() | Filters tasks by pet name and completed/pending state |
+| Conflict detection | Scheduler.detect_conflicts() | Warns when multiple tasks share the same scheduled time |
+| Recurring tasks | Task.mark_complete() | Creates a next occurrence for daily or weekly tasks when the current one is completed |
 
 ## 📸 Demo Walkthrough
 

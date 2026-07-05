@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import List
 
 
@@ -12,10 +13,25 @@ class Task:
     frequency: str = "once"
     completed: bool = False
     description: str | None = None
+    scheduled_time: str | None = None
+    due_date: date | None = None
 
-    def mark_complete(self) -> None:
-        """Mark the task as completed."""
+    def mark_complete(self, pet: "Pet | None" = None) -> "Task | None":
+        """Mark the task as completed and create a recurring follow-up when needed."""
         self.completed = True
+        if self.frequency.lower() in {"daily", "weekly"} and pet is not None:
+            next_due = date.today() + timedelta(days=1 if self.frequency.lower() == "daily" else 7)
+            next_task = Task(
+                title=self.title,
+                duration_minutes=self.duration_minutes,
+                priority=self.priority,
+                frequency=self.frequency,
+                scheduled_time=self.scheduled_time,
+                due_date=next_due,
+            )
+            pet.add_task(next_task)
+            return next_task
+        return None
 
     def mark_incomplete(self) -> None:
         """Mark the task as pending again."""
@@ -92,6 +108,37 @@ class Scheduler:
                 selected.append(task)
                 remaining_time -= task.duration_minutes
         return selected
+
+    def sort_by_time(self) -> List[Task]:
+        """Return all pending tasks sorted by their scheduled time."""
+        pending_tasks = [task for task in self.retrieve_tasks() if not task.completed]
+        return sorted(
+            pending_tasks,
+            key=lambda task: task.scheduled_time or "23:59",
+        )
+
+    def filter_tasks(self, pet_name: str | None = None, completed: bool | None = None) -> List[Task]:
+        """Filter tasks by pet name and completion state."""
+        tasks = self.retrieve_tasks()
+        if pet_name is not None:
+            tasks = [task for task in tasks if any(pet.name == pet_name for pet in self.owner.pets if task in pet.tasks)]
+        if completed is not None:
+            tasks = [task for task in tasks if task.completed is completed]
+        return tasks
+
+    def detect_conflicts(self) -> List[str]:
+        """Return a simple list of warning messages for tasks sharing the same time."""
+        conflicts: List[str] = []
+        tasks = [task for task in self.retrieve_tasks() if task.scheduled_time]
+        seen = {}
+        for task in tasks:
+            key = task.scheduled_time
+            seen.setdefault(key, []).append(task)
+        for time_value, matching_tasks in seen.items():
+            if len(matching_tasks) > 1:
+                names = ", ".join(task.title for task in matching_tasks)
+                conflicts.append(f"Conflict at {time_value}: {names}")
+        return conflicts
 
     @staticmethod
     def _priority_score(priority: str) -> int:

@@ -13,16 +13,127 @@ The scheduler sorts tasks by importance, respects the available time, and explai
 """
 )
 
-if "tasks" not in st.session_state:
-    st.session_state.tasks = []
+if "owner" not in st.session_state:
+    st.session_state.owner = Owner(name="Jordan")
 
-if "selected_task_index" not in st.session_state:
-    st.session_state.selected_task_index = 0
+if "current_pet_index" not in st.session_state:
+    st.session_state.current_pet_index = 0
 
-st.subheader("Owner and pet details")
-owner_name = st.text_input("Owner name", value="Jordan")
-pet_name = st.text_input("Pet name", value="Mochi")
-species = st.selectbox("Species", ["dog", "cat", "other"])
+owner = st.session_state.owner
+
+st.subheader("Owner details")
+owner_name = st.text_input("Owner name", value=owner.name)
+if st.button("Save owner"):
+    owner.name = owner_name or "Owner"
+    st.success(f"Owner updated to {owner.name}.")
+
+st.divider()
+
+st.subheader("Add a pet")
+pet_name = st.text_input("Pet name", key="pet_name_input", value="Mochi")
+species = st.selectbox("Species", ["dog", "cat", "other"], key="species_input")
+if st.button("Add pet"):
+    if pet_name.strip():
+        pet = Pet(name=pet_name.strip(), species=species)
+        owner.add_pet(pet)
+        st.session_state.current_pet_index = len(owner.pets) - 1
+        st.success(f"Added {pet.name} to {owner.name}'s profile.")
+    else:
+        st.warning("Please enter a pet name.")
+
+if owner.pets:
+    pet_names = [pet.name for pet in owner.pets]
+    selected_pet_index = st.selectbox(
+        "Select pet",
+        options=list(range(len(owner.pets))),
+        format_func=lambda index: pet_names[index],
+        key="current_pet_index",
+    )
+    selected_pet = owner.pets[selected_pet_index]
+else:
+    selected_pet = None
+
+st.divider()
+
+st.subheader("Add or edit care tasks")
+if selected_pet is None:
+    st.info("Add a pet first to attach care tasks.")
+else:
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        task_title = st.text_input("Task title", key="task_title")
+    with col2:
+        duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20, key="task_duration")
+    with col3:
+        priority = st.selectbox("Priority", ["low", "medium", "high"], key="task_priority")
+
+    if st.button("Add task"):
+        if task_title.strip():
+            task = Task(
+                title=task_title.strip(),
+                duration_minutes=int(duration),
+                priority=priority,
+            )
+            selected_pet.add_task(task)
+            st.success(f"Added {task.title} to {selected_pet.name}.")
+        else:
+            st.warning("Please enter a task title.")
+
+    if selected_pet.tasks:
+        tasks = selected_pet.tasks
+        task_options = [f"{index + 1}. {task.title} ({task.duration_minutes} min, {task.priority})" for index, task in enumerate(tasks)]
+        selected_task_index = st.selectbox(
+            "Edit or remove a task",
+            options=list(range(len(tasks))),
+            format_func=lambda index: task_options[index],
+            key="selected_task_index",
+        )
+        current_task = tasks[selected_task_index]
+
+        with st.form("edit_task_form"):
+            edit_title = st.text_input("Edit title", value=current_task.title, key="edit_title")
+            edit_duration = st.number_input(
+                "Edit duration (minutes)",
+                min_value=1,
+                max_value=240,
+                value=current_task.duration_minutes,
+                key="edit_duration",
+            )
+            edit_priority = st.selectbox(
+                "Edit priority",
+                ["low", "medium", "high"],
+                index=["low", "medium", "high"].index(current_task.priority),
+                key="edit_priority",
+            )
+            submitted = st.form_submit_button("Update task")
+            if submitted:
+                current_task.title = edit_title.strip() or current_task.title
+                current_task.duration_minutes = int(edit_duration)
+                current_task.priority = edit_priority
+                st.success("Task updated.")
+
+        if st.button("Remove selected task"):
+            tasks.pop(selected_task_index)
+            st.success("Task removed.")
+
+        st.write("Current tasks")
+        st.table(
+            [
+                {
+                    "title": task.title,
+                    "duration_minutes": task.duration_minutes,
+                    "priority": task.priority,
+                    "completed": task.completed,
+                }
+                for task in tasks
+            ]
+        )
+    else:
+        st.info("No tasks yet. Add one above to build a plan.")
+
+st.divider()
+
+st.subheader("Build schedule")
 available_minutes = st.number_input(
     "Available minutes today",
     min_value=15,
@@ -30,104 +141,18 @@ available_minutes = st.number_input(
     value=120,
     step=15,
 )
-
-st.divider()
-
-st.subheader("Add or edit care tasks")
-col1, col2, col3 = st.columns(3)
-with col1:
-    task_title = st.text_input("Task title", key="task_title")
-with col2:
-    duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20, key="task_duration")
-with col3:
-    priority = st.selectbox("Priority", ["low", "medium", "high"], key="task_priority")
-
-if st.button("Add task"):
-    if task_title.strip():
-        st.session_state.tasks.append(
-            {
-                "title": task_title.strip(),
-                "duration_minutes": int(duration),
-                "priority": priority,
-            }
-        )
-        st.success(f"Added {task_title.strip()}.")
-    else:
-        st.warning("Please enter a task title.")
-
-if st.session_state.tasks:
-    task_options = [
-        f"{index + 1}. {task['title']} ({task['duration_minutes']} min, {task['priority']})"
-        for index, task in enumerate(st.session_state.tasks)
-    ]
-    selected_index = st.selectbox(
-        "Edit an existing task",
-        options=list(range(len(st.session_state.tasks))),
-        format_func=lambda index: task_options[index],
-        key="selected_task_index",
-    )
-
-    current_task = st.session_state.tasks[selected_index]
-    with st.form("edit_task_form"):
-        edit_title = st.text_input("Edit title", value=current_task["title"], key="edit_title")
-        edit_duration = st.number_input(
-            "Edit duration (minutes)",
-            min_value=1,
-            max_value=240,
-            value=current_task["duration_minutes"],
-            key="edit_duration",
-        )
-        edit_priority = st.selectbox(
-            "Edit priority",
-            ["low", "medium", "high"],
-            index=["low", "medium", "high"].index(current_task["priority"]),
-            key="edit_priority",
-        )
-        submitted = st.form_submit_button("Update task")
-        if submitted:
-            st.session_state.tasks[selected_index] = {
-                "title": edit_title.strip() or current_task["title"],
-                "duration_minutes": int(edit_duration),
-                "priority": edit_priority,
-            }
-            st.success("Task updated.")
-
-    if st.button("Remove selected task"):
-        st.session_state.tasks.pop(selected_index)
-        st.session_state.selected_task_index = max(0, min(selected_index, len(st.session_state.tasks) - 1))
-        st.success("Task removed.")
-
-    st.write("Current tasks")
-    st.table(st.session_state.tasks)
-else:
-    st.info("No tasks yet. Add one above to build a plan.")
-
-st.divider()
-
-st.subheader("Build schedule")
 if st.button("Generate schedule"):
-    if not st.session_state.tasks:
-        st.warning("Add at least one task before generating a schedule.")
+    if selected_pet is None or not selected_pet.tasks:
+        st.warning("Add a pet and at least one task before generating a schedule.")
     else:
-        owner = Owner(name=owner_name or "Owner")
-        pet = Pet(name=pet_name or "Pet", species=species)
-        tasks = [
-            Task(
-                title=task["title"],
-                duration_minutes=int(task["duration_minutes"]),
-                priority=task["priority"],
-            )
-            for task in st.session_state.tasks
-        ]
-
         plan = DailyPlanScheduler(
             owner=owner,
-            pet=pet,
-            tasks=tasks,
+            pet=selected_pet,
+            tasks=selected_pet.tasks,
             available_minutes=int(available_minutes),
         ).build_plan()
 
-        st.success(f"Daily plan for {pet.name} is ready.")
+        st.success(f"Daily plan for {selected_pet.name} is ready.")
         st.write(f"Planned time: {plan.total_minutes} of {int(available_minutes)} minutes")
 
         if plan.items:

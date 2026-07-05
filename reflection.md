@@ -22,7 +22,7 @@
 
 **b. Tradeoffs**
 
-- One tradeoff is that the scheduler does not consider the exact order of the day or task-specific time windows. It chooses a high-priority subset of tasks that fits the daily budget, even if a different arrangement might be more realistic.
+- One tradeoff is that the scheduler only checks for exact time matches when detecting conflicts, rather than handling overlapping durations. This keeps the logic lightweight and easy to understand while still warning the owner about obvious clashes.
 - This tradeoff is reasonable for this project because the goal is to create a clear first version of the planner rather than a full-time scheduling engine.
 
 ---
