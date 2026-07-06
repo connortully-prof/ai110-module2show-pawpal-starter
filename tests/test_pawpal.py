@@ -72,3 +72,45 @@ def test_detect_conflicts_returns_warning_for_matching_times():
 
     assert len(conflicts) == 1
     assert "Walk" in conflicts[0] and "Feed" in conflicts[0]
+
+
+def test_save_and_load_round_trip_persists_owner_and_tasks(tmp_path):
+    owner = Owner(name="Jordan")
+    pet = Pet(name="Mochi", species="dog")
+    owner.add_pet(pet)
+    pet.add_task(Task(title="Walk", duration_minutes=20, priority="high", scheduled_time="09:00"))
+
+    data_path = tmp_path / "data.json"
+    owner.save_to_json(data_path)
+    reloaded_owner = Owner.load_from_json(data_path)
+
+    assert reloaded_owner.name == "Jordan"
+    assert len(reloaded_owner.pets) == 1
+    assert reloaded_owner.pets[0].tasks[0].title == "Walk"
+
+
+def test_sort_by_priority_then_time_orders_high_priority_first():
+    owner = Owner(name="Jordan")
+    pet = Pet(name="Mochi", species="dog")
+    owner.add_pet(pet)
+    pet.add_task(Task(title="Walk", duration_minutes=20, priority="medium", scheduled_time="09:00"))
+    pet.add_task(Task(title="Feed", duration_minutes=10, priority="high", scheduled_time="09:30"))
+    pet.add_task(Task(title="Play", duration_minutes=15, priority="high", scheduled_time="08:00"))
+
+    scheduler = Scheduler(owner=owner)
+    ordered = scheduler.sort_by_priority_then_time()
+
+    assert [task.title for task in ordered] == ["Play", "Feed", "Walk"]
+
+
+def test_find_next_available_slot_returns_earliest_open_time():
+    owner = Owner(name="Jordan")
+    pet = Pet(name="Mochi", species="dog")
+    owner.add_pet(pet)
+    pet.add_task(Task(title="Walk", duration_minutes=20, priority="high", scheduled_time="09:00"))
+    pet.add_task(Task(title="Feed", duration_minutes=10, priority="medium", scheduled_time="09:30"))
+
+    scheduler = Scheduler(owner=owner)
+
+    assert scheduler.find_next_available_slot(15, "08:00") == "08:00"
+    assert scheduler.find_next_available_slot(20, "09:00") == "09:45"

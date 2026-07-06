@@ -1,30 +1,50 @@
-import streamlit as st
+from pathlib import Path
 
-from pawpal_system import DailyPlanScheduler, Owner, Pet, Task, Scheduler
+import streamlit as st
+import pawpal_system as pawpal_system_module
+from pawpal_system import DailyPlanScheduler, Owner, Pet, Scheduler, Task
+
+DATA_PATH = Path(__file__).with_name("data.json")
+LOAD_OWNER_HELPER = getattr(pawpal_system_module, "load_owner_from_json", None)
+SAVE_OWNER_HELPER = getattr(pawpal_system_module, "save_owner_to_json", None)
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 st.title("🐾 PawPal+")
-
 st.markdown(
     """
-PawPal+ helps a busy pet owner turn a list of care tasks into a realistic daily plan.
-The scheduler sorts tasks by importance, respects the available time, and explains why each task was included or skipped.
+PawPal+ turns pet care tasks into a realistic daily plan with smart priority scheduling, conflict checks, and persistence between runs.
 """
 )
 
 if "owner" not in st.session_state:
-    st.session_state.owner = Owner(name="Jordan")
+    if hasattr(Owner, "load_from_json"):
+        st.session_state.owner = Owner.load_from_json(DATA_PATH)
+    elif LOAD_OWNER_HELPER is not None:
+        st.session_state.owner = LOAD_OWNER_HELPER(DATA_PATH)
+    else:
+        st.session_state.owner = Owner(name="Owner")
 
 if "current_pet_index" not in st.session_state:
     st.session_state.current_pet_index = 0
 
 owner = st.session_state.owner
 
+
+def persist_owner() -> None:
+    if hasattr(owner, "save_to_json"):
+        owner.save_to_json(DATA_PATH)
+    elif SAVE_OWNER_HELPER is not None:
+        SAVE_OWNER_HELPER(owner, DATA_PATH)
+
+
+st.info(f"💾 Your profile is automatically saved to {DATA_PATH.name}.")
+
 st.subheader("Owner details")
 owner_name = st.text_input("Owner name", value=owner.name)
 if st.button("Save owner"):
     owner.name = owner_name or "Owner"
+    persist_owner()
     st.success(f"Owner updated to {owner.name}.")
 
 st.divider()
@@ -37,6 +57,7 @@ if st.button("Add pet"):
         pet = Pet(name=pet_name.strip(), species=species)
         owner.add_pet(pet)
         st.session_state.current_pet_index = len(owner.pets) - 1
+        persist_owner()
         st.success(f"Added {pet.name} to {owner.name}'s profile.")
     else:
         st.warning("Please enter a pet name.")
@@ -69,12 +90,9 @@ else:
 
     if st.button("Add task"):
         if task_title.strip():
-            task = Task(
-                title=task_title.strip(),
-                duration_minutes=int(duration),
-                priority=priority,
-            )
+            task = Task(title=task_title.strip(), duration_minutes=int(duration), priority=priority)
             selected_pet.add_task(task)
+            persist_owner()
             st.success(f"Added {task.title} to {selected_pet.name}.")
         else:
             st.warning("Please enter a task title.")
@@ -110,10 +128,12 @@ else:
                 current_task.title = edit_title.strip() or current_task.title
                 current_task.duration_minutes = int(edit_duration)
                 current_task.priority = edit_priority
+                persist_owner()
                 st.success("Task updated.")
 
         if st.button("Remove selected task"):
             tasks.pop(selected_task_index)
+            persist_owner()
             st.success("Task removed.")
 
         st.write("Current tasks")
@@ -123,7 +143,7 @@ else:
                     "title": task.title,
                     "duration_minutes": task.duration_minutes,
                     "priority": task.priority,
-                    "completed": task.completed,
+                    "completed": "✅" if task.completed else "⏳",
                 }
                 for task in tasks
             ]
@@ -152,13 +172,23 @@ if st.button("Generate schedule"):
             available_minutes=int(available_minutes),
         ).build_plan()
 
-        st.success(f"Daily plan for {selected_pet.name} is ready.")
+        st.success(f"📅 Daily plan for {selected_pet.name} is ready.")
         st.write(f"Planned time: {plan.total_minutes} of {int(available_minutes)} minutes")
 
         scheduler = Scheduler(owner=owner)
-        sorted_tasks = scheduler.sort_by_time()
+        if hasattr(scheduler, "sort_by_priority_then_time"):
+            sorted_tasks = scheduler.sort_by_priority_then_time()
+        else:
+            sorted_tasks = scheduler.sort_by_time()
         pending_tasks = scheduler.filter_tasks(pet_name=selected_pet.name, completed=False)
         conflicts = scheduler.detect_conflicts()
+        if hasattr(scheduler, "find_next_available_slot"):
+            next_slot = scheduler.find_next_available_slot(duration_minutes=20, start_time="08:00")
+        else:
+            next_slot = "08:00"
+
+        st.caption("🧠 Scheduling uses priority first, then time, and highlights the next available slot for new tasks.")
+        st.info(f"💡 Suggested next available slot for a 20-minute task: {next_slot}")
 
         if plan.items:
             st.write("### Included tasks")

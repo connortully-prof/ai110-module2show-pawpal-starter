@@ -1,8 +1,29 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from pathlib import Path
 from typing import List
+
+
+def _parse_time_to_minutes(value: str | None) -> int:
+    if not value:
+        return 24 * 60
+    try:
+        hours_str, minutes_str = value.split(":", 1)
+        hours = int(hours_str)
+        minutes = int(minutes_str)
+        return hours * 60 + minutes
+    except ValueError:
+        return 24 * 60
+
+
+def _format_minutes_to_time(total_minutes: int) -> str:
+    normalized = total_minutes % (24 * 60)
+    hours = normalized // 60
+    minutes = normalized % 60
+    return f"{hours:02d}:{minutes:02d}"
 
 
 @dataclass
@@ -42,6 +63,32 @@ class Task:
         status = "done" if self.completed else "pending"
         return f"{self.title} ({self.duration_minutes} min, {self.priority}, {status})"
 
+    def to_dict(self) -> dict:
+        return {
+            "title": self.title,
+            "duration_minutes": self.duration_minutes,
+            "priority": self.priority,
+            "frequency": self.frequency,
+            "completed": self.completed,
+            "description": self.description,
+            "scheduled_time": self.scheduled_time,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Task":
+        due_date = data.get("due_date")
+        return cls(
+            title=data.get("title", "Task"),
+            duration_minutes=int(data.get("duration_minutes", 0)),
+            priority=data.get("priority", "medium"),
+            frequency=data.get("frequency", "once"),
+            completed=bool(data.get("completed", False)),
+            description=data.get("description"),
+            scheduled_time=data.get("scheduled_time"),
+            due_date=date.fromisoformat(due_date) if due_date else None,
+        )
+
 
 @dataclass
 class Pet:
@@ -63,6 +110,24 @@ class Pet:
         """Return the number of tasks attached to this pet."""
         return len(self.tasks)
 
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "species": self.species,
+            "age_months": self.age_months,
+            "tasks": [task.to_dict() for task in self.tasks],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Pet":
+        pet = cls(
+            name=data.get("name", "Pet"),
+            species=data.get("species", "other"),
+            age_months=data.get("age_months"),
+        )
+        pet.tasks = [Task.from_dict(task_data) for task_data in data.get("tasks", [])]
+        return pet
+
 
 @dataclass
 class Owner:
@@ -83,6 +148,55 @@ class Owner:
         """Return all pending tasks across the owner's pets."""
         return [task for task in self.get_all_tasks() if not task.completed]
 
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "preferences": self.preferences,
+            "pets": [pet.to_dict() for pet in self.pets],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Owner":
+        owner = cls(
+            name=data.get("name", "Owner"),
+            preferences=list(data.get("preferences", [])),
+        )
+        owner.pets = [Pet.from_dict(pet_data) for pet_data in data.get("pets", [])]
+        return owner
+
+    def save_to_json(self, path: str | Path) -> None:
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("w", encoding="utf-8") as handle:
+            json.dump(self.to_dict(), handle, indent=2)
+
+    @classmethod
+    def load_from_json(cls, path: str | Path) -> "Owner":
+        destination = Path(path)
+        if not destination.exists():
+            return cls(name="Owner")
+        with destination.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        return cls.from_dict(data)
+
+
+def load_owner_from_json(path: str | Path) -> Owner:
+    """Load an Owner from disk using a module-level helper for compatibility."""
+    destination = Path(path)
+    if not destination.exists():
+        return Owner(name="Owner")
+    with destination.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    return Owner.from_dict(data)
+
+
+def save_owner_to_json(owner: Owner, path: str | Path) -> None:
+    """Save an Owner to disk using a module-level helper for compatibility."""
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8") as handle:
+        json.dump(owner.to_dict(), handle, indent=2)
+
 
 @dataclass
 class Scheduler:
@@ -93,13 +207,9 @@ class Scheduler:
         return self.owner.get_all_tasks()
 
     def build_daily_schedule(self, available_minutes: int = 120) -> List[Task]:
-        """Build a simple priority-based daily schedule within the time budget."""
+        """Build a priority-based daily schedule within the time budget."""
         pending_tasks = [task for task in self.retrieve_tasks() if not task.completed]
-        ordered_tasks = sorted(
-            pending_tasks,
-            key=lambda task: self._priority_score(task.priority),
-            reverse=True,
-        )
+        ordered_tasks = self.sort_by_priority_then_time(pending_tasks)
 
         selected: List[Task] = []
         remaining_time = available_minutes
@@ -114,14 +224,22 @@ class Scheduler:
         pending_tasks = [task for task in self.retrieve_tasks() if not task.completed]
         return sorted(
             pending_tasks,
-            key=lambda task: task.scheduled_time or "23:59",
+            key=lambda task: _parse_time_to_minutes(task.scheduled_time),
+        )
+
+    def sort_by_priority_then_time(self, tasks: List[Task] | None = None) -> List[Task]:
+        """Return tasks sorted by priority first and then by scheduled time."""
+        pending_tasks = tasks if tasks is not None else [task for task in self.retrieve_tasks() if not task.completed]
+        return sorted(
+            pending_tasks,
+            key=lambda task: (-self._priority_score(task.priority), _parse_time_to_minutes(task.scheduled_time)),
         )
 
     def filter_tasks(self, pet_name: str | None = None, completed: bool | None = None) -> List[Task]:
         """Filter tasks by pet name and completion state."""
         tasks = self.retrieve_tasks()
         if pet_name is not None:
-            tasks = [task for task in tasks if any(pet.name == pet_name for pet in self.owner.pets if task in pet.tasks)]
+            tasks = [task for task in tasks if any(pet.name == pet_name and task in pet.tasks for pet in self.owner.pets)]
         if completed is not None:
             tasks = [task for task in tasks if task.completed is completed]
         return tasks
@@ -130,7 +248,7 @@ class Scheduler:
         """Return a simple list of warning messages for tasks sharing the same time."""
         conflicts: List[str] = []
         tasks = [task for task in self.retrieve_tasks() if task.scheduled_time]
-        seen = {}
+        seen: dict[str, List[Task]] = {}
         for task in tasks:
             key = task.scheduled_time
             seen.setdefault(key, []).append(task)
@@ -139,6 +257,29 @@ class Scheduler:
                 names = ", ".join(task.title for task in matching_tasks)
                 conflicts.append(f"Conflict at {time_value}: {names}")
         return conflicts
+
+    def find_next_available_slot(self, duration_minutes: int, start_time: str | None = None) -> str:
+        """Find the earliest available time slot that fits the requested duration."""
+        start_value = start_time or "08:00"
+        start_minutes = _parse_time_to_minutes(start_value)
+        candidate_minutes = start_minutes
+
+        while candidate_minutes <= 24 * 60:
+            candidate_end = candidate_minutes + duration_minutes
+            fits = True
+            for task in self.retrieve_tasks():
+                if not task.scheduled_time:
+                    continue
+                task_start = _parse_time_to_minutes(task.scheduled_time)
+                task_end = task_start + task.duration_minutes
+                if not (candidate_end <= task_start or candidate_minutes >= task_end):
+                    fits = False
+                    break
+            if fits:
+                return _format_minutes_to_time(candidate_minutes)
+            candidate_minutes += 15
+
+        return _format_minutes_to_time(candidate_minutes)
 
     @staticmethod
     def _priority_score(priority: str) -> int:
@@ -175,8 +316,7 @@ class DailyPlanScheduler:
         """Create a simple plan for the Streamlit app using priority and time."""
         ordered_tasks = sorted(
             self.tasks,
-            key=lambda task: self._priority_score(task.priority),
-            reverse=True,
+            key=lambda task: (-self._priority_score(task.priority), _parse_time_to_minutes(task.scheduled_time)),
         )
 
         selected: List[PlannedTask] = []

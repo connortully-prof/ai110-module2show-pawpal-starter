@@ -1,4 +1,8 @@
-from pawpal_system import Owner, Pet, Task, Scheduler
+from pawpal_system import Owner, Pet, Scheduler, Task
+
+
+def _priority_icon(priority: str) -> str:
+    return {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(priority.lower(), "⚪")
 
 
 def main() -> None:
@@ -19,26 +23,29 @@ def main() -> None:
     scheduler = Scheduler(owner=owner)
     schedule = scheduler.build_daily_schedule(available_minutes=60)
 
-    print("Today's Schedule")
-    print("=" * 20)
+    print("📅 Today's Schedule")
+    print("=" * 24)
     for task in schedule:
-        print(f"- {task.title} ({task.duration_minutes} min, {task.priority})")
+        print(f"- {_priority_icon(task.priority)} {task.title} ({task.duration_minutes} min, {task.priority.upper()})")
 
-    print("\nSorted by time")
-    for task in scheduler.sort_by_time():
-        print(f"- {task.title} at {task.scheduled_time}")
+    print("\n🕒 Sorted by priority and time")
+    for task in scheduler.sort_by_priority_then_time():
+        print(f"- {_priority_icon(task.priority)} {task.title} at {task.scheduled_time or 'unscheduled'}")
 
-    print("\nFiltered pending tasks for Mochi")
+    print("\n🧼 Filtered pending tasks for Mochi")
     for task in scheduler.filter_tasks(pet_name="Mochi", completed=False):
-        print(f"- {task.title}")
+        print(f"- {_priority_icon(task.priority)} {task.title}")
 
-    print("\nRecurring task demo")
+    print("\n🔁 Recurring task demo")
     recurring.mark_complete(pet=dog)
     print(f"- Created next occurrence for {recurring.title}")
 
-    print("\nConflicts")
+    print("\n⚠️ Conflicts")
     for warning in scheduler.detect_conflicts():
         print(f"- {warning}")
+
+    print("\n✨ Suggested next slot")
+    print(f"- {scheduler.find_next_available_slot(20, '08:00')}")
 
 
 if __name__ == "__main__":

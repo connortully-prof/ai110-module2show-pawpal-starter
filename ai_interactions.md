@@ -1,40 +1,20 @@
 # AI Interactions Log
 
-> **Stretch features only.** Only fill in the sections that apply to stretch features you attempted. If you did not attempt a stretch feature, leave its section blank or delete it. This file is not required for the core project.
+## Agent Workflow
 
----
+| Item | Details |
+|------|---------|
+| Files modified | [app.py](app.py), [pawpal_system.py](pawpal_system.py), [main.py](main.py), [tests/test_pawpal.py](tests/test_pawpal.py), [README.md](README.md), [ai_interactions.md](ai_interactions.md) |
+| What I asked the agent to do | Add JSON persistence, priority-first scheduling, a next-available-slot capability, richer UI formatting, and documentation updates for PawPal+. |
+| What the agent completed | Implemented Owner.save_to_json()/load_from_json(), added priority-based sorting and next-slot planning in the scheduler, improved the Streamlit UI formatting, and updated the README and tests. |
+| Manual corrections | I verified the new scheduling behavior with pytest, adjusted the time-slot logic to match the expected 15-minute increments, and confirmed the app still launches correctly with Streamlit. |
 
-## Agent Workflow (SF7)
+## Prompt Comparison
 
-> Document your experience using an AI agent (e.g., Cursor Agent, Claude, Copilot) to make multi-step changes autonomously.
-
-**What task did you give the agent?**
-
-I asked the agent to build the PawPal+ scheduling app end to end, including the backend scheduler, Streamlit UI, tests, and documentation updates.
-
-**What did the agent do?**
-
-The agent created the scheduler logic in scheduler.py, connected the app to the backend in app.py, added unit tests for priority-based scheduling, updated the UML diagram, and helped fix pytest import issues and Streamlit startup issues.
-
-**What did you have to verify or fix manually?**
-
-I verified the scheduler behavior by running pytest, confirmed the app should be launched with streamlit run rather than python app.py, and checked that the UML diagram matched the implemented code and app flow.
-
----
-
-## Prompt Comparison (SF11)
-
-> Compare two different prompts (or two different models) on the same task.
-
-| | Option A | Option B |
-|-|----------|----------|
-| **Model / tool used** | GitHub Copilot agent | GitHub Copilot agent |
-| **Prompt** | "Build the PawPal+ scheduler and connect it to the Streamlit app." | "Fix pytest import issues and make the Streamlit app run correctly." |
-| **Response summary** | Produced a working scheduler, UI integration, and tests quickly. | Helped resolve environment-specific issues such as import path setup and correct Streamlit startup. |
-| **What was useful** | Fast implementation and code generation. | Good debugging support for toolchain and runtime issues. |
-| **Problems noticed** | Needed manual verification to ensure the UML and behavior matched the code. | Required a follow-up check to confirm the fix worked in the actual terminal environment. |
-| **Decision** | I used the first approach for the main implementation because it was the most efficient and produced the correct app structure. |
-
-**Which approach did you use in your final implementation and why?**
-
-I used the implementation-focused approach for the main build because it created the scheduler, UI, and tests in a compact and reliable way. I then verified everything manually through pytest and by launching the app with Streamlit.
+| Aspect | Prompt A | Prompt B |
+|--------|----------|----------|
+| Model / tool used | GitHub Copilot | GitHub Copilot |
+| Prompt / task | “Add priority-first scheduling and JSON persistence to PawPal+.” | “Improve the CLI and UI formatting and add a next-available-slot algorithm.” |
+| What was useful | The response gave a strong object-oriented structure for serialization and scheduling. | The response was helpful for explaining how to present the plan more clearly in the terminal and UI. |
+| What was flawed | It needed a follow-up pass to ensure the persistence layer handled dataclasses cleanly. | It did not fully account for how time-based slot logic should behave around existing tasks. |
+| Final decision | I used the first approach as the base implementation and refined the slot logic manually to match the project’s test expectations. |
